@@ -4,16 +4,25 @@ load test_helper
 
 setup() {
   export _COMMAND="${BATS_TEST_DIRNAME}/../zandbak"
+  export ZANDBAK_TMP="${BATS_TMPDIR}/zandbak-test"
+  [ -d "$ZANDBAK_TMP" ] && rm -rf "$ZANDBAK_TMP"
+  [ ! -d "$ZANDBAK_TMP" ] && mkdir -p "$ZANDBAK_TMP"
 }
+
+teardown() {
+  [ -d "$ZANDBAK_TMP" ] && rm -rf "$ZANDBAK_TMP"
+}
+
+createRepository() {
+  [ -d "$ZANDBAK_TMP" ] && mkdir -p "$ZANDBAK_TMP"/temp-repo
+}
+
+### General
+#####################################################################
 
 @test "\`zandbak\` without arguments exits with status 0." {
   run "${_COMMAND}"
   [[ "${status}" -eq 0 ]]
-}
-
-@test "\`zandbak\` without arguments prints a string." {
-  run "${_COMMAND}"
-  [[ "${output}" == "Perform a simple operation." ]]
 }
 
 @test "\`zandbak -h\` without arguments exits with status 0." {
@@ -26,64 +35,122 @@ setup() {
   [[ "${status}" -eq 0 ]]
 }
 
-@test "\`zandbak -x\` without arguments exits with status 0." {
-  run "${_COMMAND}" -x
-  [[ "${status}" -eq 0 ]]
-}
+### Base path
+#####################################################################
 
-@test "\`zandbak -x\` prints message for option 'x'." {
-  run "${_COMMAND}" -x
-  [[ "${output}" == "Perform a simple operation with --option-x." ]]
-}
+# Without argument
 
-@test "\`zandbak --option-x\` without arguments exits with status 0." {
-  run "${_COMMAND}" --option-x
-  [[ "${status}" -eq 0 ]]
-}
-
-@test "\`zandbak --option-x\` prints message for option 'x'." {
-  run "${_COMMAND}" --option-x
-  [[ "${output}" == "Perform a simple operation with --option-x." ]]
-}
-
-@test "\`zandbak -o\` without value exits with status 1." {
-  run "${_COMMAND}" -o
+@test "\`zandbak -b\` without arguments exits with status 1." {
+  run "${_COMMAND}" -b
   [[ "${status}" -eq 1 ]]
 }
 
-@test "\`zandbak -o\` without value prints message." {
-  run "${_COMMAND}" -o
-  [[ "${output}" == "Option requires a argument: -o" ]]
+@test "\`zandbak -b\` base path option without arguments prints message." {
+  run "${_COMMAND}" -b
+  [[ "${output}" =~ "Option requires a argument: -b" ]]
 }
 
-@test "\`zandbak -o\` with value exits with status 0." {
-  run "${_COMMAND}" -o 'short option value'
-  [[ "${status}" -eq 0 ]]
-}
-
-@test "\`zandbak -o\` with value prints optional message." {
-  run "${_COMMAND}" -o 'short option value'
-  [[ "${lines[0]}" == "Perform a simple operation." ]]
-  [[ "${lines[1]}" == "Short option parameter: short option value" ]]
-}
-
-@test "\`zandbak\` with long opt and missing required value exits with status 1." {
-  run "${_COMMAND}" --long-option-with-argument
+@test "\`zandbak --base-path\` without arguments exits with status 1." {
+  run "${_COMMAND}" --base-path
   [[ "${status}" -eq 1 ]]
 }
 
-@test "\`zandbak\` with long option and missing required value prints message." {
-  run "${_COMMAND}" --long-option-with-argument
-  [[ "${output}" =~ "Option requires a argument: --long-option-with-argument" ]]
+@test "\`zandbak --base-path\` base path option without arguments prints message." {
+  run "${_COMMAND}" --base-path
+  [[ "${output}" =~ "Option requires a argument: --base-path" ]]
 }
 
-@test "\`zandbak\` with option and required value exits with status 0." {
-  run "${_COMMAND}" --long-option-with-argument 'long option value'
+# With argument
+
+@test "\`zandbak -b /tmp/\` base path option with argument '/tmp/' exits with status 0." {
+  run "${_COMMAND}" -b /tmp/
   [[ "${status}" -eq 0 ]]
 }
 
-@test "\`zandbak\` with option and required value prints optional message." {
-  run "${_COMMAND}" --long-option-with-argument 'long option value'
-  [[ "${lines[0]}" == "Perform a simple operation." ]]
-  [[ "${lines[1]}" == "Long option parameter: long option value" ]]
+@test "\`zandbak --base-path /tmp/\` base path option with argument '/tmp/' exits with status 0." {
+  run "${_COMMAND}" --base-path /tmp/
+  [[ "${status}" -eq 0 ]]
+}
+
+# With non existing path
+
+@test "\`zandbak -b /non/existing/path/\` base path option with argument '/non/existing/path/' exits with status 1." {
+  run "${_COMMAND}" -b /non/existing/path/
+  [[ "${status}" -eq 1 ]]
+}
+
+@test "\`zandbak -b /non/existing/path/\` base path option with argument '/non/existing/path/' prints message." {
+  run "${_COMMAND}" -b /non/existing/path/
+  [[ "${output}" =~ "Directory '/non/existing/path/' does not exist." ]]
+}
+
+@test "\`zandbak --base-path /non/existing/path/\` base path option with argument '/non/existing/path/' exits with status 1." {
+  run "${_COMMAND}" --base-path /non/existing/path/
+  [[ "${status}" -eq 1 ]]
+}
+
+@test "\`zandbak --base-path /non/existing/path/\` base path option with argument '/non/existing/path/' prints message." {
+  run "${_COMMAND}" --base-path /non/existing/path/
+  [[ "${output}" =~ "Directory '/non/existing/path/' does not exist." ]]
+}
+
+### Base path
+#####################################################################
+
+# Without argument
+
+@test "\`zandbak -r\` without arguments exits with status 1." {
+  run "${_COMMAND}" -r
+  [[ "${status}" -eq 1 ]]
+}
+
+@test "\`zandbak -r\` repository option without arguments prints message." {
+  run "${_COMMAND}" -r
+  [[ "${output}" =~ "Option requires a argument: -r" ]]
+}
+
+@test "\`zandbak --repos\` without arguments exits with status 1." {
+  run "${_COMMAND}" --repos
+  [[ "${status}" -eq 1 ]]
+}
+
+@test "\`zandbak --repos\` repository option without arguments prints message." {
+  run "${_COMMAND}" --repos
+  [[ "${output}" =~ "Option requires a argument: --repos" ]]
+}
+
+# With argument
+
+@test "\`zandbak -r /temp-repo/\` repository option with argument '/temp-repo/' exits with status 0." {
+  createRepository
+  run "${_COMMAND}" -b ${ZANDBAK_TMP} -r /temp-repo/
+  [[ "${status}" -eq 0 ]]
+}
+
+@test "\`zandbak --repos /temp-repo/\` repository option with argument '/temp-repo/' exits with status 0." {
+  createRepository
+  run "${_COMMAND}" -b ${ZANDBAK_TMP} --repos /temp-repo/
+  [[ "${status}" -eq 0 ]]
+}
+
+# With non existing path
+
+@test "\`zandbak -r /non/existing/path/\` repository option with argument '/non/existing/path/' exits with status 1." {
+  run "${_COMMAND}" -b ${ZANDBAK_TMP} -r /non/existing/path/
+  [[ "${status}" -eq 1 ]]
+}
+
+@test "\`zandbak -r /non/existing/path/\` repository option with argument '/non/existing/path/' prints message." {
+  run "${_COMMAND}" -b ${ZANDBAK_TMP} -r /non/existing/path/
+  [[ "${output}" =~ "Directory '${ZANDBAK_TMP}/non/existing/path/' does not exist." ]]
+}
+
+@test "\`zandbak --repos /non/existing/path/\` repository option with argument '/non/existing/path/' exits with status 1." {
+  run "${_COMMAND}" -b ${ZANDBAK_TMP} --repos /non/existing/path/
+  [[ "${status}" -eq 1 ]]
+}
+
+@test "\`zandbak --repos /non/existing/path/\` repository option with argument '/non/existing/path/' prints message." {
+  run "${_COMMAND}" -b ${ZANDBAK_TMP} --repos /non/existing/path/
+  [[ "${output}" =~ "Directory '${ZANDBAK_TMP}/non/existing/path/' does not exist." ]]
 }

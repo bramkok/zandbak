@@ -12,17 +12,17 @@ $ zandbak [--option <argument>]
 
 Display help information.
 
-##### `-x`, `--option-x`
+##### `-b`, `--base-path`
 
-An option named 'x'.
+Set base path for repositories.
 
-##### `-o`
+Default: `/home/vagrant/repositories/`
 
-Short option with argument.
+##### `-r`, `--repos`
 
-##### `--long-option-with-argument`
+Select repositories to run commands in.
 
-Long option with argument.
+Default: All sub directories of base path.
 
 ##### `--debug`
 

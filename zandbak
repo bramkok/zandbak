@@ -8,11 +8,10 @@
 #   zandbak [--option <argument>]
 #
 # Options:
-#   -h --help                     Display this help information.
-#   -x --option-x                 An option named 'x'.
-#   -o                            Short option with argument.
-#   --long-option-with-argument   Long option with argument.
-#   --debug                       Display debug information.
+#   -h --help         Display this help information.
+#   -b --base-path    Set base path.
+#   -r --repos        Select repositories.
+#   --debug           Display debug information.
 #
 # https://github.com/bramkok/zandbak
 
@@ -25,6 +24,16 @@ DEFAULT_IFS="${IFS}"
 SAFER_IFS=$'\n\t'
 IFS="${SAFER_IFS}"
 _ME=$(basename "${0}") # Program basename
+
+
+### Global variables
+#####################################################################
+
+# Default repository path
+_BASE_PATH="/home/vagrant/repositories/"
+
+# Repositories to run commands in
+_REPOSITORIES=()
 
 ### Debug/Exit/Help
 #####################################################################
@@ -63,11 +72,10 @@ Usage:
   ${_ME} [--option <argument>]
 
 Options:
-  -h --help                     Display this help information.
-  -x --option-x                 An option named 'x'.
-  -o                            Short option with argument.
-  --long-option-with-argument   Long option with argument.
-  --debug                       Display debug information.
+   -h --help         Display this help information.
+   -b --base-path    Set base path.
+   -r --repos        Select repositories.
+   --debug           Display debug information.
 
 HEREDOC
 }
@@ -117,9 +125,6 @@ unset options
 # Option variables
 _PRINT_HELP=0
 _USE_DEBUG=0
-_OPTION_X=0
-_SHORT_OPTION_WITH_PARAMETER=""
-_LONG_OPTION_WITH_PARAMETER=""
 
 _require_argument() {
   local _option="${1:-}"
@@ -140,18 +145,15 @@ do
     --debug)
       _USE_DEBUG=1
       ;;
-    -x|--option-x)
-      _OPTION_X=1
-      ;;
-    -o)
+    -b|--base-path)
       _require_argument "${__option}" "${__maybe_param}"
-      _SHORT_OPTION_WITH_PARAMETER="${__maybe_param}"
+      _OPTION_B_PARAM="${__maybe_param}"
        shift
       ;;
-    --long-option-with-argument)
+    -r|--repos)
       _require_argument "${__option}" "${__maybe_param}"
-      _LONG_OPTION_WITH_PARAMETER="${__maybe_param}"
-      shift
+      _OPTION_R_PARAM="${__maybe_param}"
+       shift
       ;;
     --endopts)
       break
@@ -166,20 +168,39 @@ done
 ### Functions
 #####################################################################
 
-_example() {
-  _debug printf ">> Performing operation...\n"
-
-  if ((_OPTION_X)); then
-    printf "Perform a simple operation with --option-x.\n"
+_isDirectory() {
+  local _directory="${1:-}"
+  if [[ ! -d "$_directory" ]]; then
+    die "Directory '$_directory' does not exist."
   else
-    printf "Perform a simple operation.\n"
+    return 0
   fi
-  if [[ -n "${_SHORT_OPTION_WITH_PARAMETER}" ]]; then
-    printf "Short option parameter: %s\n" "${_SHORT_OPTION_WITH_PARAMETER}"
+}
+
+_setBasePath() {
+  local _basePath="${1:-}"
+  if [[ -n "$_basePath" ]]; then
+    _isDirectory "${_basePath}"
+    _BASE_PATH=$_basePath
   fi
-  if [[ -n "${_LONG_OPTION_WITH_PARAMETER}" ]]; then
-    printf "Long option parameter: %s\n" "${_LONG_OPTION_WITH_PARAMETER}"
+  return 0
+}
+
+_setRepositories() {
+  local _params="${1:-}"
+  local _directories=()
+  if [[ -z "$_params" ]]; then
+    _directories+=($(find "$_BASE_PATH" -maxdepth 1 -mindepth 1 \
+      -type d))
+  else
+    while read -r line; do
+      local _basePathWithDirectory="$_BASE_PATH$line"
+      _isDirectory "${_basePathWithDirectory}"
+      _directories+=($_basePathWithDirectory)
+    done < <(echo -e "${_params// /\\n}")
   fi
+  _REPOSITORIES+=(${_directories[@]})
+  return 0
 }
 
 ### Runtime
@@ -189,7 +210,14 @@ _main() {
   if ((_PRINT_HELP)); then
     _print_help
   else
-    _example "${@}"
+    # Set base path
+    _setBasePath "${_OPTION_B_PARAM:-}"
+
+    # Set repositories
+    _setRepositories "${_OPTION_R_PARAM:-}"
+
+    # Exit
+    exit 0
   fi
 }
 
