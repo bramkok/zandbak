@@ -15,6 +15,8 @@ teardown() {
 
 createRepository() {
   [ -d "$ZANDBAK_TMP" ] && mkdir -p "$ZANDBAK_TMP"/temp-repo
+  [ -d "$ZANDBAK_TMP" ] && mkdir -p "$ZANDBAK_TMP"/temp-non-repo
+  git init "$ZANDBAK_TMP"/temp-repo
 }
 
 ### General
@@ -119,7 +121,7 @@ createRepository() {
   [[ "${output}" =~ "Option requires a argument: --repos" ]]
 }
 
-# With argument
+# With existing directory that is a git repository
 
 @test "\`zandbak -r /temp-repo/\` repository option with argument '/temp-repo/' exits with status 0." {
   createRepository
@@ -153,4 +155,30 @@ createRepository() {
 @test "\`zandbak --repos /non/existing/path/\` repository option with argument '/non/existing/path/' prints message." {
   run "${_COMMAND}" -b ${ZANDBAK_TMP} --repos /non/existing/path/
   [[ "${output}" =~ "Directory '${ZANDBAK_TMP}/non/existing/path/' does not exist." ]]
+}
+
+# With existing directory that is not a git repository
+
+@test "\`zandbak -r /temp-non-repo/\` repository option with argument '/temp-non-repo/' exits with status 1." {
+  createRepository
+  run "${_COMMAND}" -b ${ZANDBAK_TMP} -r /temp-non-repo/
+  [[ "${status}" -eq 1 ]]
+}
+
+@test "\`zandbak -r /temp-non-repo/\` repository option with argument '/temp-non-repo/' prints message." {
+  createRepository
+  run "${_COMMAND}" -b ${ZANDBAK_TMP} -r /temp-non-repo/
+  [[ "${output}" =~ "Directory '${ZANDBAK_TMP}/temp-non-repo/' is not a git repository." ]]
+}
+
+@test "\`zandbak --repos /temp-non-repo/\` repository option with argument '/temp-non-repo/' exits with status 1." {
+  createRepository
+  run "${_COMMAND}" -b ${ZANDBAK_TMP} --repos /temp-non-repo/
+  [[ "${status}" -eq 1 ]]
+}
+
+@test "\`zandbak --repos /temp-non-repo/\` repository option with argument '/temp-non-repo/' prints message." {
+  createRepository
+  run "${_COMMAND}" -b ${ZANDBAK_TMP} --repos /temp-non-repo/
+  [[ "${output}" =~ "Directory '${ZANDBAK_TMP}/temp-non-repo/' is not a git repository." ]]
 }

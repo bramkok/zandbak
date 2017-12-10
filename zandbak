@@ -177,6 +177,16 @@ _isDirectory() {
   fi
 }
 
+_isGitRepository() {
+  local _directory="${1:-}"
+  local _gitDirectory="${_directory}/.git"
+  if [[ -d "$_gitDirectory" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 _setBasePath() {
   local _basePath="${1:-}"
   if [[ -n "$_basePath" ]]; then
@@ -190,12 +200,18 @@ _setRepositories() {
   local _params="${1:-}"
   local _directories=()
   if [[ -z "$_params" ]]; then
-    _directories+=($(find "$_BASE_PATH" -maxdepth 1 -mindepth 1 \
-      -type d))
+    while read -r line; do
+      if _isGitRepository "${line}"; then
+        _directories+=($line)
+      fi
+    done < <(find "$_BASE_PATH" -maxdepth 1 -mindepth 1 -type d)
   else
     while read -r line; do
       local _basePathWithDirectory="$_BASE_PATH$line"
       _isDirectory "${_basePathWithDirectory}"
+      if ! _isGitRepository "${_basePathWithDirectory}"; then
+        die "Directory '$_basePathWithDirectory' is not a git repository."
+      fi
       _directories+=($_basePathWithDirectory)
     done < <(echo -e "${_params// /\\n}")
   fi
