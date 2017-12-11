@@ -11,6 +11,15 @@
 #   -h --help         Display this help information.
 #   -b --base-path    Set base path.
 #   -r --repos        Select repositories.
+#   --gs              Git status.
+#   --gb              Git current branch.
+#   --gco <branch>    Git checkout branch.
+#   --gr              Git reset.
+#   --gcl             Git clean.
+#   --gpl             Git pull.
+#   --ci              Composer install.
+#   --cu              Composer update.
+#   --rf              Redis cache flushall.
 #   --debug           Display debug information.
 #
 # https://github.com/bramkok/zandbak
@@ -75,6 +84,15 @@ Options:
    -h --help         Display this help information.
    -b --base-path    Set base path.
    -r --repos        Select repositories.
+   --gs              Git status.
+   --gb              Git current branch.
+   --gco <branch>    Git checkout branch.
+   --gr              Git reset.
+   --gcl             Git clean.
+   --gpl             Git pull.
+   --ci              Composer install.
+   --cu              Composer update.
+   --rf              Redis cache flushall.
    --debug           Display debug information.
 
 HEREDOC
@@ -125,6 +143,15 @@ unset options
 # Option variables
 _PRINT_HELP=0
 _USE_DEBUG=0
+_OPTION_GS=0
+_OPTION_GB=0
+_OPTION_GCO=0
+_OPTION_GR=0
+_OPTION_GCL=0
+_OPTION_GPL=0
+_OPTION_CI=0
+_OPTION_CU=0
+_OPTION_RF=0
 
 _require_argument() {
   local _option="${1:-}"
@@ -154,6 +181,38 @@ do
       _require_argument "${__option}" "${__maybe_param}"
       _OPTION_R_PARAM="${__maybe_param}"
        shift
+      ;;
+    --gs)
+      _OPTION_GS=1
+      ;;
+    --gb)
+      _OPTION_GB=1
+      ;;
+    --gco)
+      _require_argument "${__option}" "${__maybe_param}"
+      _OPTION_GCO_PARAM="${__maybe_param}"
+      _OPTION_GCO=1
+      ;;
+    --gr)
+      _OPTION_GCO_PARAM="${__maybe_param}"
+      _OPTION_GR=1
+      ;;
+    --gcl)
+      _OPTION_GCL=1
+      ;;
+    --gpl)
+      _OPTION_GPL=1
+      ;;
+    --ci)
+      _OPTION_CI=1
+      _OPTION_CI_PARAM="${__maybe_param}"
+      ;;
+    --cu)
+      _OPTION_CU=1
+      _OPTION_CU_PARAM="${__maybe_param}"
+      ;;
+    --rf)
+      _OPTION_RF=1
       ;;
     --endopts)
       break
@@ -219,6 +278,79 @@ _setRepositories() {
   return 0
 }
 
+_runOnRepositories() {
+  local _command="${1:-}"
+  local _quiet="${2:-}"
+  for repository in "${_REPOSITORIES[@]}"; do
+    local _repositoryName="${repository/$_BASE_PATH//}"
+    local _repositoryNameTrimmed="\e[4m${_repositoryName:1}\e[0m:"
+    cd "${repository}"
+    if ((_quiet)); then
+      if [[ -n "$(eval "$_command")" ]]; then
+        echo -e "${_repositoryNameTrimmed}"
+        (eval "$_command")
+        echo
+      fi
+    else
+      echo -e "${_repositoryNameTrimmed}"
+      (eval "$_command")
+      echo
+    fi
+  done
+}
+
+_gitStatus() {
+  _runOnRepositories "git status -s" 1
+  exit 0
+}
+
+_gitBranch() {
+  _runOnRepositories "git rev-parse --abbrev-ref HEAD"
+  exit 0
+}
+
+_gitCheckout() {
+  local _branch="${1:-}"
+  _runOnRepositories "git checkout ${_branch}"
+  exit 0
+}
+
+_gitReset() {
+  local _params="${1:-}"
+  if [[ -z "$_params" ]]; then
+    _params="--hard"
+  fi
+  _runOnRepositories "git reset HEAD ${_params}"
+  exit 0
+}
+
+_gitClean() {
+  _runOnRepositories "git clean -f" 1
+  exit 0
+}
+
+_gitPull() {
+  _runOnRepositories "git pull --ff-only"
+  exit 0
+}
+
+_composer() {
+  local _command="${1:-}"
+  local _params="${2:-}"
+  local _mainCommand="/usr/bin/php -dmemory_limit=-1 /usr/bin/composer"
+  if [[ -z "$_params" ]]; then
+    _params="true"
+  fi
+  export COMPOSER_DISCARD_CHANGES="$_params"
+  _runOnRepositories "${_mainCommand} ${_command}"
+  exit 0
+}
+
+_redisCli() {
+  local _command="${1:-}"
+  redis-cli "${_command}"
+}
+
 ### Runtime
 #####################################################################
 
@@ -231,6 +363,33 @@ _main() {
 
     # Set repositories
     _setRepositories "${_OPTION_R_PARAM:-}"
+
+    # Git status
+    if ((_OPTION_GS)); then _gitStatus; fi
+
+    # Git branch
+    if ((_OPTION_GB)); then _gitBranch; fi
+
+    # Git checkout
+    if ((_OPTION_GCO)); then _gitCheckout "${_OPTION_GCO_PARAM:-}"; fi
+
+    # Git reset
+    if ((_OPTION_GR)); then _gitReset "${_OPTION_GR_PARAM:-}"; fi
+
+    # Git clean
+    if ((_OPTION_GCL)); then _gitClean; fi
+
+    # Git pull
+    if ((_OPTION_GPL)); then _gitPull; fi
+
+    # Composer install
+    if ((_OPTION_CI)); then _composer "install" "${_OPTION_CI_PARAM:-}"; fi
+
+    # Composer update
+    if ((_OPTION_CU)); then _composer "update" "${_OPTION_CU_PARAM:-}"; fi
+
+    # Flush redis cache
+    if ((_OPTION_RF)); then _redisCli "flushall"; fi
 
     # Exit
     exit 0

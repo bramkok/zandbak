@@ -24,6 +24,44 @@ Select repositories to run commands in.
 
 Default: All sub directories of base path.
 
+##### `--gs`
+
+Run `git status -s` on all repositories.
+
+##### `--gb`
+
+Show current branch on all repositories.
+
+Executes `git rev-parse --abbrev-ref HEAD`.
+
+##### `--gco`
+
+Git checkout branch on all repositories.
+
+##### `--gr`
+
+Run `git reset` on all repositories.
+
+##### `--gcl`
+
+Run `git clean` on all repositories.
+
+##### `--gpl`
+
+Run `git pull --ff-only` on all repositories.
+
+##### `--ci`
+
+Run `composer install` on all repositories.
+
+##### `--cu`
+
+Run `composer update` on all repositories.
+
+##### `--rf`
+
+Run `redis-cli flushall`.
+
 ##### `--debug`
 
 Display debug information.
